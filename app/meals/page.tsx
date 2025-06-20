@@ -116,94 +116,120 @@ export default function MealsPage() {
 
   if (!session) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p>Please sign in to track your meals.</p>
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Background Elements */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-200/30 dark:bg-purple-500/10 rounded-full blur-3xl" />
+        
+        <div className="relative flex items-center justify-center min-h-[60vh]">
+          <div className="glass-card p-8 text-center">
+            <UtensilsCrossed className="h-16 w-16 mx-auto mb-4 text-blue-500" />
+            <p className="text-lg font-medium mb-2">Welcome to Meals Tracker</p>
+            <p className="text-muted-foreground">Please sign in to track your meals and nutrition.</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <h1 className="text-3xl font-bold">Meals</h1>
-        <p className="text-muted-foreground">Track your daily nutrition and calories</p>
-      </motion.div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900/20 dark:to-purple-900/20" />
+      <div className="absolute top-20 left-10 w-72 h-72 bg-blue-200/30 dark:bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-200/30 dark:bg-purple-500/10 rounded-full blur-3xl" />
+      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-green-200/20 dark:bg-green-500/5 rounded-full blur-3xl" />
+      
+      <div className="relative space-y-8 p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">Meals</h1>
+          <p className="text-muted-foreground text-lg">Track your daily nutrition and calories</p>
+        </motion.div>
 
-      {/* Daily Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Calories</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCalories}</div>
-            <p className="text-xs text-muted-foreground">kcal today</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Protein</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalProtein.toFixed(1)}g</div>
-            <p className="text-xs text-muted-foreground">today</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Carbs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalCarbs.toFixed(1)}g</div>
-            <p className="text-xs text-muted-foreground">today</p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Fat</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalFat.toFixed(1)}g</div>
-            <p className="text-xs text-muted-foreground">today</p>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Daily Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        >
+          <div className="glass-card hover-lift p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Calories</h3>
+              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+            </div>
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">{totalCalories}</div>
+            <p className="text-xs text-muted-foreground mt-1">kcal today</p>
+          </div>
+          
+          <div className="glass-card hover-lift p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Protein</h3>
+              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+            </div>
+            <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{totalProtein.toFixed(1)}g</div>
+            <p className="text-xs text-muted-foreground mt-1">today</p>
+          </div>
+          
+          <div className="glass-card hover-lift p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Carbs</h3>
+              <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+            </div>
+            <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{totalCarbs.toFixed(1)}g</div>
+            <p className="text-xs text-muted-foreground mt-1">today</p>
+          </div>
+          
+          <div className="glass-card hover-lift p-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-muted-foreground">Fat</h3>
+              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+            </div>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{totalFat.toFixed(1)}g</div>
+            <p className="text-xs text-muted-foreground mt-1">today</p>
+          </div>
+        </motion.div>
 
-      {/* Add Meal Form */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Log Meal
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={createMeal} className="space-y-4">
+        {/* Add Meal Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+              <Plus className="h-5 w-5 text-white" />
+            </div>
+            <h2 className="text-xl font-semibold">Log Meal</h2>
+          </div>
+          
+          <form onSubmit={createMeal} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="name">Meal Name</Label>
+                <Label htmlFor="name" className="text-sm font-medium mb-2 block">Meal Name</Label>
                 <Input
                   id="name"
                   value={newMeal.name}
                   onChange={(e) => setNewMeal({ ...newMeal, name: e.target.value })}
                   placeholder="e.g., Grilled Chicken Salad"
+                  className="glass-input"
                   required
                 />
               </div>
               <div>
-                <Label htmlFor="mealType">Meal Type</Label>
+                <Label htmlFor="mealType" className="text-sm font-medium mb-2 block">Meal Type</Label>
                 <select
                   id="mealType"
                   value={newMeal.mealType}
                   onChange={(e) => setNewMeal({ ...newMeal, mealType: e.target.value as 'breakfast' | 'lunch' | 'dinner' | 'snack' })}
-                  className="w-full p-2 border rounded-md"
+                  className="w-full p-3 bg-white/50 dark:bg-gray-800/50 border border-white/20 dark:border-gray-700/50 rounded-lg backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
                 >
                   <option value="breakfast">Breakfast</option>
                   <option value="lunch">Lunch</option>
@@ -214,17 +240,18 @@ export default function MealsPage() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="calories">Calories (optional)</Label>
+                <Label htmlFor="calories" className="text-sm font-medium mb-2 block">Calories</Label>
                 <Input
                   id="calories"
                   type="number"
                   value={newMeal.calories}
                   onChange={(e) => setNewMeal({ ...newMeal, calories: e.target.value })}
                   placeholder="0"
+                  className="glass-input"
                 />
               </div>
               <div>
-                <Label htmlFor="protein">Protein (g)</Label>
+                <Label htmlFor="protein" className="text-sm font-medium mb-2 block">Protein (g)</Label>
                 <Input
                   id="protein"
                   type="number"
@@ -232,10 +259,11 @@ export default function MealsPage() {
                   value={newMeal.protein}
                   onChange={(e) => setNewMeal({ ...newMeal, protein: e.target.value })}
                   placeholder="0"
+                  className="glass-input"
                 />
               </div>
               <div>
-                <Label htmlFor="carbs">Carbs (g)</Label>
+                <Label htmlFor="carbs" className="text-sm font-medium mb-2 block">Carbs (g)</Label>
                 <Input
                   id="carbs"
                   type="number"
@@ -243,10 +271,11 @@ export default function MealsPage() {
                   value={newMeal.carbs}
                   onChange={(e) => setNewMeal({ ...newMeal, carbs: e.target.value })}
                   placeholder="0"
+                  className="glass-input"
                 />
               </div>
               <div>
-                <Label htmlFor="fat">Fat (g)</Label>
+                <Label htmlFor="fat" className="text-sm font-medium mb-2 block">Fat (g)</Label>
                 <Input
                   id="fat"
                   type="number"
@@ -254,27 +283,40 @@ export default function MealsPage() {
                   value={newMeal.fat}
                   onChange={(e) => setNewMeal({ ...newMeal, fat: e.target.value })}
                   placeholder="0"
+                  className="glass-input"
                 />
               </div>
             </div>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading} className="btn-premium w-full">
               {isLoading ? 'Logging...' : 'Log Meal'}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </motion.div>
 
-      {/* Meals List */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Today's Meals</CardTitle>
-          <CardDescription>Your meals logged for today</CardDescription>
-        </CardHeader>
-        <CardContent>
+        {/* Meals List */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          className="glass-card p-6"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg">
+              <UtensilsCrossed className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">Today's Meals</h2>
+              <p className="text-sm text-muted-foreground">Your meals logged for today</p>
+            </div>
+          </div>
+          
           {todayMeals.length === 0 ? (
-            <div className="text-center py-8">
-              <UtensilsCrossed className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No meals logged today. Add your first meal above!</p>
+            <div className="text-center py-12">
+              <div className="w-20 h-20 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <UtensilsCrossed className="h-10 w-10 text-blue-500" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">No meals logged today</h3>
+              <p className="text-muted-foreground">Add your first meal above to start tracking your nutrition!</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -284,52 +326,70 @@ export default function MealsPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.1 }}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="glass-card hover-lift p-4 border-l-4 border-l-blue-400"
                 >
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-2 rounded-full ${
-                      meal.mealType === 'breakfast' ? 'bg-yellow-100' :
-                      meal.mealType === 'lunch' ? 'bg-green-100' :
-                      meal.mealType === 'dinner' ? 'bg-blue-100' :
-                      'bg-purple-100'
-                    }`}>
-                      <UtensilsCrossed className={`h-4 w-4 ${
-                        meal.mealType === 'breakfast' ? 'text-yellow-600' :
-                        meal.mealType === 'lunch' ? 'text-green-600' :
-                        meal.mealType === 'dinner' ? 'text-blue-600' :
-                        'text-purple-600'
-                      }`} />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-3 rounded-xl ${
+                        meal.mealType === 'breakfast' ? 'bg-gradient-to-r from-yellow-400 to-orange-400' :
+                        meal.mealType === 'lunch' ? 'bg-gradient-to-r from-green-400 to-emerald-400' :
+                        meal.mealType === 'dinner' ? 'bg-gradient-to-r from-blue-400 to-indigo-400' :
+                        'bg-gradient-to-r from-purple-400 to-pink-400'
+                      }`}>
+                        <UtensilsCrossed className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-lg">{meal.name}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            meal.mealType === 'breakfast' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                            meal.mealType === 'lunch' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                            meal.mealType === 'dinner' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                            'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
+                          } capitalize`}>
+                            {meal.mealType}
+                          </span>
+                          <span className="text-sm font-medium text-red-600 dark:text-red-400">{meal.calories} kcal</span>
+                        </div>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                            P: {meal.protein}g
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                            C: {meal.carbs}g
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                            F: {meal.fat}g
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-medium">{meal.name}</h3>
-                      <p className="text-sm text-muted-foreground capitalize">
-                        {meal.mealType} • {meal.calories} kcal
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        P: {meal.protein}g • C: {meal.carbs}g • F: {meal.fat}g
-                      </p>
+                    <div className="flex items-center space-x-3">
+                      <div className="text-right">
+                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(meal.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteMeal(meal._id)}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(meal.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteMeal(meal._id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </motion.div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </motion.div>
+      </div>
     </div>
   )
 }

@@ -35,7 +35,8 @@ import {
   UtensilsCrossed,
   Activity,
   Calendar,
-  TrendingUp
+  TrendingUp,
+  PiggyBank
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
@@ -44,6 +45,7 @@ const navigationItems = [
   { name: 'Dashboard', href: '/', icon: Home },
   { name: 'Tasks', href: '/tasks', icon: CheckSquare },
   { name: 'Finance', href: '/finance', icon: DollarSign },
+  { name: 'Budget', href: '/budget', icon: PiggyBank },
   { name: 'Meals', href: '/meals', icon: UtensilsCrossed },
   { name: 'Fitness', href: '/fitness', icon: Activity },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
@@ -60,38 +62,53 @@ export function Navigation() {
   }
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass-card border-0 border-b border-white/10">
+      <div className="container mx-auto px-6">
+        <div className="flex h-20 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-3">
             <motion.div
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.05, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-3"
             >
-              <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">SD</span>
+              <div className="relative">
+                <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg hover-glow">
+                  <span className="text-white font-bold text-lg">J</span>
+                </div>
+                <div className="absolute -top-1 -right-1 h-4 w-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></div>
               </div>
-              <span className="font-bold text-xl">Self Dev</span>
+              <div className="flex flex-col">
+                <span className="font-bold text-xl gradient-text">Jarvis</span>
+                <span className="text-xs text-muted-foreground -mt-1">AI Assistant</span>
+              </div>
             </motion.div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center space-x-2">
             {session && (
-              <div className="flex items-center space-x-4">
-                {navigationItems.map((item) => {
+              <div className="flex items-center space-x-1">
+                {navigationItems.map((item, index) => {
                   const Icon = item.icon
                   return (
-                    <Link
+                    <motion.div
                       key={item.name}
-                      href={item.href}
-                      className="flex items-center space-x-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                      initial={{ opacity: 0, y: -20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
                     >
-                      <Icon className="h-4 w-4" />
-                      <span>{item.name}</span>
-                    </Link>
+                      <Link
+                        href={item.href}
+                        className="group relative flex items-center space-x-2 px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-300 rounded-xl hover:bg-white/10"
+                      >
+                        <Icon className="h-4 w-4 transition-transform duration-300 group-hover:scale-110" />
+                        <span className="relative">
+                          {item.name}
+                          <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300 group-hover:w-full"></span>
+                        </span>
+                      </Link>
+                    </motion.div>
                   )
                 })}
               </div>

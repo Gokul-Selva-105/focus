@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '../../auth/[...nextauth]/route'
-
-// Import the transactions array from the main route
-// In a real app, this would be handled by the database
-let transactions: any[] = []
+import { getServerSession } from 'next-auth'
+import dbConnect from '@/lib/mongodb'
+import Transaction from '@/models/Transaction'
+import User from '@/models/User'
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession()
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,20 +17,28 @@ export async function DELETE(
 
     const { id } = params
 
-    // Find the transaction index
-    const transactionIndex = transactions.findIndex(
-      transaction => transaction._id === id && transaction.userEmail === session.user.email
-    )
+    await dbConnect()
+    
+    const user = await User.findOne({ email: session.user.email })
+    if (!user) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      )
+    }
 
-    if (transactionIndex === -1) {
+    // Find and delete the transaction
+    const deletedTransaction = await Transaction.findOneAndDelete({
+      _id: id,
+      userId: user._id
+    })
+
+    if (!deletedTransaction) {
       return NextResponse.json(
         { error: 'Transaction not found' },
         { status: 404 }
       )
     }
-
-    // Remove the transaction
-    transactions.splice(transactionIndex, 1)
     
     return NextResponse.json({ message: 'Transaction deleted successfully' })
   } catch (error) {

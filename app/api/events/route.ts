@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]/route'
 
 // Mock database - in a real app, you'd use a proper database
-let events: any[] = [
+// Export this so it can be shared with the [id] route
+export let events: any[] = [
   {
     _id: '1',
     title: 'Team Meeting',

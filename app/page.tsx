@@ -21,10 +21,20 @@ import {
   Trophy,
   ArrowUp,
   ArrowDown,
-  Plus
+  Plus,
+  BarChart3,
+  Moon,
+  Sun,
+  Star,
+  Sparkles,
+  Users,
+  Award,
+  PieChart,
+  LineChart,
+  Apple
 } from 'lucide-react'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface DashboardStats {
   totalTasks: number
@@ -41,7 +51,8 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string
-  type: 'task' | 'meal' | 'fitness' | 'finance' | 'event'
+  type: string
+  description: string
   title: string
   time: string
   status?: string
@@ -64,100 +75,8 @@ export default function Dashboard() {
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  useEffect(() => {
-    if (session?.user) {
-      fetchDashboardData()
-    }
-  }, [session])
-
-  const fetchDashboardData = async () => {
-    try {
-      setIsLoading(true)
-      const [statsResponse, activitiesResponse] = await Promise.all([
-        fetch('/api/dashboard/stats'),
-        fetch('/api/dashboard/recent-activities')
-      ])
-      
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json()
-        setStats(statsData)
-      }
-      
-      if (activitiesResponse.ok) {
-        const activitiesData = await activitiesResponse.json()
-        setRecentActivities(activitiesData)
-      }
-    } catch (error) {
-      console.error('Failed to fetch dashboard data:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  if (status === 'loading' || isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="text-center max-w-2xl mx-auto p-8"
-        >
-          <div className="mb-8">
-            <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Target className="w-10 h-10 text-white" />
-            </div>
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">JARVIS</h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Your Personal AI Assistant for Self Development
-            </p>
-            <p className="text-lg text-gray-500 mb-8">
-              Track tasks, manage finances, monitor health, plan events, and achieve your goals with intelligent insights
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="text-center p-4">
-              <CheckSquare className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Task Management</p>
-            </div>
-            <div className="text-center p-4">
-              <DollarSign className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Finance Tracking</p>
-            </div>
-            <div className="text-center p-4">
-              <UtensilsCrossed className="w-8 h-8 text-orange-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Nutrition Logging</p>
-            </div>
-            <div className="text-center p-4">
-              <Activity className="w-8 h-8 text-red-600 mx-auto mb-2" />
-              <p className="text-sm font-medium">Fitness Tracking</p>
-            </div>
-          </div>
-          
-          <div className="space-x-4">
-            <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
-              <Link href="/auth/signin">Get Started</Link>
-            </Button>
-            <Button asChild variant="outline" size="lg">
-              <Link href="/auth/signup">Create Account</Link>
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    )
-  }
-
   const taskCompletionRate = stats.totalTasks > 0 ? (stats.completedTasks / stats.totalTasks) * 100 : 0
-  const calorieGoal = 2000 // This could be user-configurable
+  const calorieGoal = 2000
   const calorieProgress = (stats.totalCalories / calorieGoal) * 100
   const savingsRate = stats.monthlyIncome > 0 ? ((stats.monthlyIncome - stats.monthlyExpenses) / stats.monthlyIncome) * 100 : 0
 
@@ -183,378 +102,563 @@ export default function Dashboard() {
     }
   }
 
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!session?.user?.email) return
+      
+      try {
+        const [statsResponse, activitiesResponse] = await Promise.all([
+          fetch('/api/dashboard/stats'),
+          fetch('/api/dashboard/recent-activities')
+        ])
+        
+        if (statsResponse.ok) {
+          const statsData = await statsResponse.json()
+          setStats(statsData)
+        }
+        
+        if (activitiesResponse.ok) {
+          const activitiesData = await activitiesResponse.json()
+          setRecentActivities(activitiesData)
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [session])
+
+  if (status === 'loading' || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+        <div className="relative">
+          <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+          <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-r-pink-400 rounded-full animate-spin animation-delay-150"></div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+        {/* Floating Elements */}
+        <div className="absolute top-20 left-20 w-32 h-32 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-float"></div>
+        <div className="absolute top-40 right-20 w-40 h-40 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-float animation-delay-2000"></div>
+        <div className="absolute bottom-20 left-1/3 w-36 h-36 bg-gradient-to-r from-pink-400 to-orange-400 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-float animation-delay-4000"></div>
+        
+        {/* Stars */}
+        <Star className="absolute top-32 left-1/4 w-4 h-4 text-yellow-400 animate-pulse" />
+        <Sparkles className="absolute top-1/4 right-1/3 w-5 h-5 text-purple-400 animate-pulse animation-delay-1000" />
+        <Star className="absolute bottom-1/3 left-1/5 w-3 h-3 text-pink-400 animate-pulse animation-delay-2000" />
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="relative z-10 text-center max-w-4xl mx-auto px-6"
+        >
+          <motion.div
+            initial={{ scale: 0.8 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="mb-8"
+          >
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-full mb-6 shadow-2xl">
+              <Zap className="w-12 h-12 text-white" />
+            </div>
+            <h1 className="text-7xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent mb-4">
+              JARVIS
+            </h1>
+            <p className="text-2xl text-gray-700 mb-3 font-medium">Your Peaceful AI Assistant</p>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed">Experience tranquil productivity with mindful task management, wellness tracking, and gentle financial guidance</p>
+          </motion.div>
+
+          <motion.div 
+            className="grid md:grid-cols-3 gap-8 mb-12"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+          >
+            <div className="bg-white/40 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <CheckSquare className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="font-bold text-gray-800 mb-3 text-xl">Mindful Tasks</h3>
+              <p className="text-gray-600 leading-relaxed">Gentle task prioritization with AI-powered insights for balanced productivity</p>
+            </div>
+            
+            <div className="bg-white/40 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-r from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <Heart className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="font-bold text-gray-800 mb-3 text-xl">Wellness Journey</h3>
+              <p className="text-gray-600 leading-relaxed">Holistic health tracking with beautiful visualizations and gentle reminders</p>
+            </div>
+            
+            <div className="bg-white/40 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                <BarChart3 className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="font-bold text-gray-800 mb-3 text-xl">Financial Harmony</h3>
+              <p className="text-gray-600 leading-relaxed">Peaceful money management with intuitive insights and stress-free budgeting</p>
+            </div>
+          </motion.div>
+          
+          <motion.div 
+            className="flex flex-col sm:flex-row gap-6 justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+          >
+            <Button asChild size="lg" className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white text-lg px-10 py-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 border-0">
+              <Link href="/auth/signin">
+                <Sparkles className="w-5 h-5 mr-3" />
+                Begin Your Journey
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="bg-white/30 backdrop-blur-lg border-2 border-white/30 hover:bg-white/40 text-gray-700 text-lg px-10 py-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300">
+              <Link href="/auth/signup">
+                <Plus className="w-5 h-5 mr-3" />
+                Create Account
+              </Link>
+            </Button>
+          </motion.div>
+        </motion.div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full">
+        <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-r from-blue-300 to-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float"></div>
+        <div className="absolute top-40 right-20 w-80 h-80 bg-gradient-to-r from-purple-300 to-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float animation-delay-2000"></div>
+        <div className="absolute bottom-20 left-1/3 w-72 h-72 bg-gradient-to-r from-pink-300 to-orange-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float animation-delay-4000"></div>
+      </div>
+
+      <div className="relative z-10 max-w-6xl mx-auto space-y-6 p-4 lg:p-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+          className="bg-white/40 backdrop-blur-lg p-8 rounded-3xl border border-white/20 shadow-xl"
         >
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900">
-              Welcome back, {session.user?.name?.split(' ')[0] || 'User'}! 👋
-            </h1>
-            <p className="text-gray-600 mt-2">
-              Here's your personal development overview for today
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchDashboardData}>
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Refresh
-            </Button>
-            <Button asChild>
-              <Link href="/analytics">
-                <Trophy className="w-4 h-4 mr-2" />
-                View Analytics
-              </Link>
-            </Button>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                  <Sun className="w-6 h-6 text-white" />
+                </div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                  Good Morning, {session.user?.name || 'Friend'}!
+                </h1>
+              </div>
+              <p className="text-gray-600 text-lg">You had a peaceful sleep last night ✨</p>
+              <p className="text-gray-500">Ready to make today amazing?</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="bg-white/50 backdrop-blur-lg px-6 py-3 rounded-2xl border border-white/30 shadow-lg">
+                <div className="flex items-center gap-2 text-gray-700">
+                  <Calendar className="w-5 h-5" />
+                  <span className="font-medium">
+                    {new Date().toLocaleDateString('en-US', { 
+                      weekday: 'long', 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </motion.div>
 
-        {/* Key Metrics */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium opacity-90">Task Progress</CardTitle>
-                <CheckSquare className="w-4 h-4 opacity-90" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">
-                {stats.completedTasks}/{stats.totalTasks}
-              </div>
-              <Progress value={taskCompletionRate} className="bg-blue-400" />
-              <p className="text-xs opacity-90 mt-2">
-                {taskCompletionRate.toFixed(0)}% completed today
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-green-500 to-green-600 text-white">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium opacity-90">Balance</CardTitle>
-                <DollarSign className="w-4 h-4 opacity-90" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">
-                ${stats.currentBalance.toFixed(2)}
-              </div>
-              <div className="flex items-center gap-2">
-                {savingsRate >= 0 ? (
-                  <ArrowUp className="w-3 h-3 text-green-200" />
-                ) : (
-                  <ArrowDown className="w-3 h-3 text-red-200" />
-                )}
-                <p className="text-xs opacity-90">
-                  {savingsRate.toFixed(1)}% savings rate
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-orange-500 to-orange-600 text-white">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium opacity-90">Nutrition</CardTitle>
-                <UtensilsCrossed className="w-4 h-4 opacity-90" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">
-                {stats.totalCalories} cal
-              </div>
-              <Progress value={Math.min(calorieProgress, 100)} className="bg-orange-400" />
-              <p className="text-xs opacity-90 mt-2">
-                {stats.todayMeals} meals logged
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-r from-red-500 to-red-600 text-white">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium opacity-90">Fitness</CardTitle>
-                <Activity className="w-4 h-4 opacity-90" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold mb-2">
-                {stats.weeklyCaloriesBurned}
-              </div>
-              <div className="flex items-center gap-2">
-                <Flame className="w-3 h-3 text-red-200" />
-                <p className="text-xs opacity-90">
-                  calories burned this week
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* Quick Actions & Recent Activity */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Quick Actions */}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-1"
+            transition={{ delay: 0.1 }}
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-yellow-500" />
-                  Quick Actions
-                </CardTitle>
+            <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <CheckSquare className="w-6 h-6 text-white" />
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-700 border-0 rounded-full px-3 py-1">
+                    {Math.round(taskCompletionRate)}%
+                  </Badge>
+                </div>
+                <CardTitle className="text-gray-700 text-sm font-medium mt-3">Task Progress</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/tasks">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Task
-                  </Link>
-                </Button>
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/meals">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Log Meal
-                  </Link>
-                </Button>
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/fitness">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Log Workout
-                  </Link>
-                </Button>
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/finance">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Transaction
-                  </Link>
-                </Button>
-                <Button asChild className="w-full justify-start" variant="outline">
-                  <Link href="/calendar">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Schedule Event
-                  </Link>
-                </Button>
+              <CardContent className="pt-0">
+                <div className="text-3xl font-bold text-gray-800 mb-3">{stats.completedTasks}/{stats.totalTasks}</div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                  <div 
+                    className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full transition-all duration-500" 
+                    style={{ width: `${taskCompletionRate}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {taskCompletionRate > 75 ? (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <Trophy className="w-3 h-3" /> Excellent progress!
+                    </span>
+                  ) : (
+                    <span className="text-blue-600 flex items-center gap-1">
+                      <Target className="w-3 h-3" /> Keep going!
+                    </span>
+                  )}
+                </p>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <DollarSign className="w-6 h-6 text-white" />
+                  </div>
+                  <Badge className="bg-green-100 text-green-700 border-0 rounded-full px-3 py-1">
+                    {Math.round(savingsRate)}%
+                  </Badge>
+                </div>
+                <CardTitle className="text-gray-700 text-sm font-medium mt-3">Balance</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-3xl font-bold text-gray-800 mb-3">${stats.currentBalance.toLocaleString()}</div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                  <div 
+                    className="bg-gradient-to-r from-green-400 to-emerald-600 h-2 rounded-full transition-all duration-500" 
+                    style={{ width: `${Math.min(savingsRate, 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {savingsRate > 20 ? (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" /> Great savings!
+                    </span>
+                  ) : (
+                    <span className="text-orange-600 flex items-center gap-1">
+                      <Target className="w-3 h-3" /> Room to grow
+                    </span>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="lg:col-span-2"
           >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-500" />
-                  Recent Activity
-                </CardTitle>
+            <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 bg-gradient-to-r from-orange-400 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <UtensilsCrossed className="w-6 h-6 text-white" />
+                  </div>
+                  <Badge className="bg-orange-100 text-orange-700 border-0 rounded-full px-3 py-1">
+                    {Math.round(calorieProgress)}%
+                  </Badge>
+                </div>
+                <CardTitle className="text-gray-700 text-sm font-medium mt-3">Nutrition</CardTitle>
               </CardHeader>
-              <CardContent>
-                {recentActivities.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600">No recent activity. Start by adding some data!</p>
+              <CardContent className="pt-0">
+                <div className="text-3xl font-bold text-gray-800 mb-3">{stats.totalCalories} cal</div>
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                  <div 
+                    className="bg-gradient-to-r from-orange-400 to-red-500 h-2 rounded-full transition-all duration-500" 
+                    style={{ width: `${Math.min(calorieProgress, 100)}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {calorieProgress >= 80 && calorieProgress <= 120 ? (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <Heart className="w-3 h-3" /> Perfect balance!
+                    </span>
+                  ) : (
+                    <span className="text-blue-600 flex items-center gap-1">
+                      <Target className="w-3 h-3" /> Stay mindful
+                    </span>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-400 to-pink-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Activity className="w-6 h-6 text-white" />
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {recentActivities.slice(0, 6).map((activity) => {
-                      const Icon = getActivityIcon(activity.type)
-                      return (
-                        <div key={activity.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                          <div className={`p-2 rounded-full bg-white ${getActivityColor(activity.type)}`}>
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{activity.title}</p>
-                            <p className="text-sm text-gray-600">{activity.time}</p>
-                          </div>
-                          {activity.status && (
-                            <Badge variant="secondary">{activity.status}</Badge>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                  <Badge className="bg-purple-100 text-purple-700 border-0 rounded-full px-3 py-1">
+                    {stats.weeklyActivities}
+                  </Badge>
+                </div>
+                <CardTitle className="text-gray-700 text-sm font-medium mt-3">Fitness</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-3xl font-bold text-gray-800 mb-3">{stats.weeklyActivities} sessions</div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Flame className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm text-gray-600">{stats.weeklyCaloriesBurned} cal burned</span>
+                </div>
+                <p className="text-xs text-gray-600">
+                  {stats.weeklyActivities >= 3 ? (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <Award className="w-3 h-3" /> Amazing work!
+                    </span>
+                  ) : (
+                    <span className="text-purple-600 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> Let's move gently
+                    </span>
+                  )}
+                </p>
               </CardContent>
             </Card>
           </motion.div>
         </div>
 
-        {/* Module Cards */}
+        {/* Analytics Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Modules</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <Link href="/tasks">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckSquare className="w-5 h-5 text-blue-600" />
-                      Tasks
-                    </CardTitle>
-                    <Badge variant="secondary">{stats.totalTasks}</Badge>
+          {/* Weekly Progress Chart */}
+          <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-gray-800 flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-white" />
+                </div>
+                Weekly Progress
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-white/30 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                    <span className="text-gray-700 text-sm">Tasks</span>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">Manage your daily tasks and to-dos</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Completed</span>
-                      <span>{stats.completedTasks}/{stats.totalTasks}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div className="bg-blue-500 h-2 rounded-full" style={{width: `${Math.min(100, (stats.completedTasks / Math.max(stats.totalTasks, 1)) * 100)}%`}}></div>
                     </div>
-                    <Progress value={taskCompletionRate} className="h-2" />
+                    <span className="font-bold text-gray-800 text-sm">{stats.completedTasks}</span>
                   </div>
-                </CardContent>
-              </Link>
-            </Card>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-white/30 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-gray-700 text-sm">Workouts</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div className="bg-green-500 h-2 rounded-full" style={{width: `${Math.min(100, (stats.weeklyActivities / 7) * 100)}%`}}></div>
+                    </div>
+                    <span className="font-bold text-gray-800 text-sm">{stats.weeklyActivities}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-white/30 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                    <span className="text-gray-700 text-sm">Meals</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-16 bg-gray-200 rounded-full h-2">
+                      <div className="bg-orange-500 h-2 rounded-full" style={{width: `${Math.min(100, (stats.todayMeals / 5) * 100)}%`}}></div>
+                    </div>
+                    <span className="font-bold text-gray-800 text-sm">{stats.todayMeals}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <Link href="/finance">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <DollarSign className="w-5 h-5 text-green-600" />
-                      Finance
-                    </CardTitle>
-                    <Badge variant="secondary">${stats.currentBalance.toFixed(0)}</Badge>
+          {/* Wellness Score */}
+          <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-gray-800 flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-xl flex items-center justify-center">
+                  <PieChart className="w-5 h-5 text-white" />
+                </div>
+                Wellness Score
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col items-center">
+                <div className="relative w-32 h-32 mb-4">
+                  <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="text-gray-200"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      fill="none"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <path
+                      className="text-gradient-to-r from-green-400 to-blue-500"
+                      stroke="url(#gradient)"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      fill="none"
+                      strokeDasharray={`${Math.round((taskCompletionRate + (stats.weeklyActivities * 10) + (stats.todayMeals * 5)) / 3)}, 100`}
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                    />
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#10b981" />
+                        <stop offset="100%" stopColor="#3b82f6" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-gray-800">
+                      {Math.round((taskCompletionRate + (stats.weeklyActivities * 10) + (stats.todayMeals * 5)) / 3)}%
+                    </span>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">Track income, expenses, and budget</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Monthly Income</span>
-                      <span className="text-green-600">${stats.monthlyIncome}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Monthly Expenses</span>
-                      <span className="text-red-600">${stats.monthlyExpenses}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
+                </div>
+                <p className="text-sm text-gray-600 text-center">
+                  {Math.round((taskCompletionRate + (stats.weeklyActivities * 10) + (stats.todayMeals * 5)) / 3) >= 80 ? (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <Award className="w-4 h-4" /> Excellent wellness!
+                    </span>
+                  ) : Math.round((taskCompletionRate + (stats.weeklyActivities * 10) + (stats.todayMeals * 5)) / 3) >= 60 ? (
+                    <span className="text-blue-600 flex items-center gap-1">
+                      <Target className="w-4 h-4" /> Good progress!
+                    </span>
+                  ) : (
+                    <span className="text-purple-600 flex items-center gap-1">
+                      <Sparkles className="w-4 h-4" /> Keep growing!
+                    </span>
+                  )}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <Link href="/meals">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <UtensilsCrossed className="w-5 h-5 text-orange-600" />
-                      Nutrition
-                    </CardTitle>
-                    <Badge variant="secondary">{stats.todayMeals}</Badge>
+          {/* Recent Activities */}
+          <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-gray-800 flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+                Recent Activities
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentActivities.length > 0 ? (
+                  recentActivities.slice(0, 4).map((activity, index) => {
+                    const IconComponent = getActivityIcon(activity.type)
+                    
+                    return (
+                      <motion.div
+                        key={activity.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.1 * index }}
+                        className="flex items-center gap-4 p-4 bg-white/30 rounded-2xl hover:bg-white/40 transition-all duration-200"
+                      >
+                        <div className="w-10 h-10 bg-gradient-to-r from-gray-100 to-gray-200 rounded-xl flex items-center justify-center">
+                          <IconComponent className="w-5 h-5 text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-800 text-sm">{activity.title}</h3>
+                          <p className="text-xs text-gray-600">{activity.description}</p>
+                        </div>
+                        <span className="text-xs text-gray-500">{activity.time}</span>
+                      </motion.div>
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-8">
+                    <Moon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-500">Your peaceful day awaits</p>
+                    <p className="text-sm text-gray-400 mt-1">Start your journey with JARVIS</p>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">Log meals and track nutrition</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Today's Calories</span>
-                      <span>{stats.totalCalories} / {calorieGoal}</span>
-                    </div>
-                    <Progress value={Math.min(calorieProgress, 100)} className="h-2" />
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-            <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <Link href="/fitness">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-red-600" />
-                      Fitness
-                    </CardTitle>
-                    <Badge variant="secondary">{stats.weeklyActivities}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">Track workouts and activities</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Weekly Activities</span>
-                      <span>{stats.weeklyActivities}</span>
+        {/* Quick Actions */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <Card className="bg-white/40 backdrop-blur-lg border border-white/20 shadow-xl rounded-3xl overflow-hidden">
+            <CardHeader>
+              <CardTitle className="text-gray-800 flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-pink-500 rounded-xl flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <Button asChild className="h-20 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border border-blue-200 text-blue-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                  <Link href="/tasks" className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-white" />
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Calories Burned</span>
-                      <span>{stats.weeklyCaloriesBurned}</span>
+                    <span className="text-sm font-medium">Add Task</span>
+                  </Link>
+                </Button>
+                <Button asChild className="h-20 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 border border-green-200 text-green-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                   <Link href="/meals" className="flex flex-col items-center gap-2">
+                     <div className="w-8 h-8 bg-green-500 rounded-xl flex items-center justify-center">
+                       <Apple className="w-4 h-4 text-white" />
+                     </div>
+                     <span className="text-sm font-medium">Log Meal</span>
+                   </Link>
+                 </Button>
+                <Button asChild className="h-20 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 border border-orange-200 text-orange-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                  <Link href="/fitness" className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 bg-orange-500 rounded-xl flex items-center justify-center">
+                      <Activity className="w-4 h-4 text-white" />
                     </div>
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <Link href="/calendar">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5 text-purple-600" />
-                      Calendar
-                    </CardTitle>
-                    <Badge variant="secondary">{stats.upcomingEvents}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">Manage events and schedule</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Upcoming Events</span>
-                      <span>{stats.upcomingEvents}</span>
+                    <span className="text-sm font-medium">Log Workout</span>
+                  </Link>
+                </Button>
+                <Button asChild className="h-20 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 border border-purple-200 text-purple-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                  <Link href="/finance" className="flex flex-col items-center gap-2">
+                    <div className="w-8 h-8 bg-purple-500 rounded-xl flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-white" />
                     </div>
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
-
-            <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-              <Link href="/analytics">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-indigo-600" />
-                      Analytics
-                    </CardTitle>
-                    <Badge variant="secondary">Insights</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 mb-4">View detailed progress reports</p>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Data Points</span>
-                      <span>All Modules</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
-          </div>
+                    <span className="text-sm font-medium">Add Expense</span>
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
       </div>
     </div>

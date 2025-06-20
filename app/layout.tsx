@@ -9,8 +9,13 @@ import { Navigation } from '@/components/navigation'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Self Development App',
-  description: 'A comprehensive personal growth and productivity application',
+  title: 'Jarvis - AI Assistant',
+  description: 'Your intelligent AI assistant for productivity, health, and personal growth',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
 }
 
 export default function RootLayout({
@@ -28,10 +33,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="min-h-screen bg-background">
+            <div className="min-h-screen">
               <Navigation />
-              <main className="container mx-auto px-4 py-8">
-                {children}
+              <main className="container mx-auto px-6 pt-28 pb-12">
+                <div className="fade-in">
+                  {children}
+                </div>
               </main>
             </div>
             <Toaster />

@@ -1,18 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '../../auth/[...nextauth]/route'
-import { connectToDatabase } from '@/lib/mongodb'
+import dbConnect from '@/lib/mongodb'
+import Task from '@/models/Task'
+import Transaction from '@/models/Transaction'
+import Meal from '@/models/Meal'
+import Activity from '@/models/Activity'
+import Event from '@/models/Event'
+import User from '@/models/User'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await getServerSession()
     
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { db } = await connectToDatabase()
-    const userEmail = session.user.email
+    await dbConnect()
+    
+    const user = await User.findOne({ email: session.user.email })
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
 
     // Get current date for filtering
     const today = new Date()
@@ -21,15 +30,15 @@ export async function GET(request: NextRequest) {
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
 
     // Fetch tasks stats
-    const totalTasks = await db.collection('tasks').countDocuments({ userEmail })
-    const completedTasks = await db.collection('tasks').countDocuments({ 
-      userEmail, 
+    const totalTasks = await Task.countDocuments({ userId: user._id })
+    const completedTasks = await Task.countDocuments({ 
+      userId: user._id, 
       completed: true,
       updatedAt: { $gte: startOfDay }
     })
 
     // Fetch finance stats
-    const transactions = await db.collection('transactions').find({ userEmail }).toArray()
+    const transactions = await Transaction.find({ userId: user._id })
     const currentBalance = transactions.reduce((sum: number, t: any) => {
       return t.type === 'income' ? sum + t.amount : sum - t.amount
     }, 0)
@@ -43,38 +52,38 @@ export async function GET(request: NextRequest) {
       .reduce((sum: number, t: any) => sum + t.amount, 0)
 
     // Fetch meals stats
-    const todayMeals = await db.collection('meals').countDocuments({ 
-      userEmail,
+    const todayMeals = await Meal.countDocuments({ 
+      userId: user._id,
       createdAt: { $gte: startOfDay }
     })
 
-    const todayMealsData = await db.collection('meals').find({ 
-      userEmail,
+    const todayMealsData = await Meal.find({ 
+      userId: user._id,
       createdAt: { $gte: startOfDay }
-    }).toArray()
+    })
 
     const totalCalories = todayMealsData.reduce((sum: number, meal: any) => {
       return sum + (meal.calories || 0)
     }, 0)
 
     // Fetch fitness stats
-    const weeklyActivities = await db.collection('activities').countDocuments({ 
-      userEmail,
+    const weeklyActivities = await Activity.countDocuments({ 
+      userId: user._id,
       createdAt: { $gte: startOfWeek }
     })
 
-    const weeklyActivitiesData = await db.collection('activities').find({ 
-      userEmail,
+    const weeklyActivitiesData = await Activity.find({ 
+      userId: user._id,
       createdAt: { $gte: startOfWeek }
-    }).toArray()
+    })
 
     const weeklyCaloriesBurned = weeklyActivitiesData.reduce((sum: number, activity: any) => {
       return sum + (activity.caloriesBurned || 0)
     }, 0)
 
     // Fetch calendar stats
-    const upcomingEvents = await db.collection('events').countDocuments({ 
-      userEmail,
+    const upcomingEvents = await Event.countDocuments({ 
+      userId: user._id,
       date: { $gte: today }
     })
 

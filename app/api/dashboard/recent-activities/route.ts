@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '../../auth/[...nextauth]/route'
-import { connectToDatabase } from '@/lib/mongodb'
+import dbConnect from '@/lib/mongodb'
+import Task from '@/models/Task'
+import Meal from '@/models/Meal'
+import Transaction from '@/models/Transaction'
+import Activity from '@/models/Activity'
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,18 +15,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { db } = await connectToDatabase()
-    const userEmail = session.user.email
+    await dbConnect()
+    const userId = session.user.id
 
     // Get recent activities from all collections
     const recentActivities = []
 
     // Get recent tasks
-    const recentTasks = await db.collection('tasks')
-      .find({ userEmail })
+    const recentTasks = await Task.find({ userId })
       .sort({ updatedAt: -1 })
       .limit(5)
-      .toArray()
+      .lean()
 
     recentTasks.forEach((task: any) => {
       recentActivities.push({
@@ -35,11 +38,10 @@ export async function GET(request: NextRequest) {
     })
 
     // Get recent meals
-    const recentMeals = await db.collection('meals')
-      .find({ userEmail })
+    const recentMeals = await Meal.find({ userId })
       .sort({ createdAt: -1 })
       .limit(5)
-      .toArray()
+      .lean()
 
     recentMeals.forEach((meal: any) => {
       recentActivities.push({
@@ -52,11 +54,10 @@ export async function GET(request: NextRequest) {
     })
 
     // Get recent fitness activities
-    const recentFitness = await db.collection('activities')
-      .find({ userEmail })
+    const recentFitness = await Activity.find({ userId })
       .sort({ createdAt: -1 })
       .limit(5)
-      .toArray()
+      .lean()
 
     recentFitness.forEach((activity: any) => {
       recentActivities.push({
@@ -69,11 +70,10 @@ export async function GET(request: NextRequest) {
     })
 
     // Get recent transactions
-    const recentTransactions = await db.collection('transactions')
-      .find({ userEmail })
+    const recentTransactions = await Transaction.find({ userId })
       .sort({ createdAt: -1 })
       .limit(5)
-      .toArray()
+      .lean()
 
     recentTransactions.forEach((transaction: any) => {
       recentActivities.push({

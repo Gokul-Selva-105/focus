@@ -9,7 +9,7 @@ import User from '@/models/User'
 const client = new MongoClient(process.env.MONGODB_URI!)
 const clientPromise = Promise.resolve(client)
 
-const handler = NextAuth({
+export const authOptions = {
   adapter: MongoDBAdapter(clientPromise),
   providers: [
     CredentialsProvider({
@@ -75,6 +75,8 @@ const handler = NextAuth({
     signUp: '/auth/signup'
   },
   secret: process.env.NEXTAUTH_SECRET
-})
+}
+
+const handler = NextAuth(authOptions)
 
 export { handler as GET, handler as POST }
