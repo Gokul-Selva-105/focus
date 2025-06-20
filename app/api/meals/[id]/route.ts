@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../auth/[...nextauth]/route'
-
-// Import the meals array from the main route
-// In a real app, this would be handled by the database
-let meals: any[] = []
+import { deleteMeal } from '@/lib/meals-data'
 
 export async function DELETE(
   request: NextRequest,
@@ -19,20 +16,15 @@ export async function DELETE(
 
     const { id } = params
 
-    // Find the meal index
-    const mealIndex = meals.findIndex(
-      meal => meal._id === id && meal.userEmail === session.user.email
-    )
+    // Delete the meal using shared data store
+    const deleted = deleteMeal(id, session.user.email)
 
-    if (mealIndex === -1) {
+    if (!deleted) {
       return NextResponse.json(
         { error: 'Meal not found' },
         { status: 404 }
       )
     }
-
-    // Remove the meal
-    meals.splice(mealIndex, 1)
     
     return NextResponse.json({ message: 'Meal deleted successfully' })
   } catch (error) {

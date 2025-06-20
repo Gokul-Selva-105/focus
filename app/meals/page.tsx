@@ -34,6 +34,7 @@ export default function MealsPage() {
     mealType: 'breakfast' as const
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -89,6 +90,7 @@ export default function MealsPage() {
   }
 
   const deleteMeal = async (mealId: string) => {
+    setDeletingMealId(mealId)
     try {
       const response = await fetch(`/api/meals/${mealId}`, {
         method: 'DELETE'
@@ -97,9 +99,23 @@ export default function MealsPage() {
       if (response.ok) {
         setMeals(meals.filter(m => m._id !== mealId))
         toast({ title: 'Meal deleted successfully!' })
+      } else {
+        const errorData = await response.json()
+        toast({ 
+          title: 'Failed to delete meal', 
+          description: errorData.error || 'Unknown error occurred',
+          variant: 'destructive' 
+        })
       }
     } catch (error) {
-      toast({ title: 'Failed to delete meal', variant: 'destructive' })
+      console.error('Delete meal error:', error)
+      toast({ 
+        title: 'Failed to delete meal', 
+        description: 'Network error occurred',
+        variant: 'destructive' 
+      })
+    } finally {
+      setDeletingMealId(null)
     }
   }
 
@@ -378,9 +394,14 @@ export default function MealsPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => deleteMeal(meal._id)}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        disabled={deletingMealId === meal._id}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingMealId === meal._id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>

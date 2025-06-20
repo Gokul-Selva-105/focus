@@ -129,6 +129,26 @@ export default function BudgetPage() {
     setBudgets(budgets.map(b => b.id === currentBudget.id ? updatedBudget : b))
   }
 
+  const updateBudgetItem = (updatedItem: BudgetItem) => {
+    if (!currentBudget) return
+    
+    const updatedBudget = {
+      ...currentBudget,
+      items: currentBudget.items.map(item => 
+        item.id === updatedItem.id 
+          ? { ...updatedItem, remaining: updatedItem.budgeted - updatedItem.spent }
+          : item
+      )
+    }
+    
+    updatedBudget.totalBudgeted = updatedBudget.items.reduce((sum, item) => sum + item.budgeted, 0)
+    updatedBudget.totalSpent = updatedBudget.items.reduce((sum, item) => sum + item.spent, 0)
+    updatedBudget.totalRemaining = updatedBudget.totalBudgeted - updatedBudget.totalSpent
+    
+    setBudgets(budgets.map(b => b.id === currentBudget.id ? updatedBudget : b))
+    setEditingItem(null)
+  }
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Background Elements */}
@@ -423,6 +443,100 @@ export default function BudgetPage() {
                   >
                     <Save className="h-4 w-4" />
                     <span>Save</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Edit Budget Item Modal */}
+        <AnimatePresence>
+          {editingItem && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+              onClick={() => setEditingItem(null)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-white/20 dark:border-gray-700/50 p-6 w-full max-w-md"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    Edit Budget Category
+                  </h3>
+                  <button
+                    onClick={() => setEditingItem(null)}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Category Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editingItem.category}
+                      onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="e.g., Housing, Food, Transportation"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Budgeted Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={editingItem.budgeted}
+                      onChange={(e) => setEditingItem({ ...editingItem, budgeted: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Already Spent
+                    </label>
+                    <input
+                      type="number"
+                      value={editingItem.spent}
+                      onChange={(e) => setEditingItem({ ...editingItem, spent: parseFloat(e.target.value) || 0 })}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex space-x-3 mt-6">
+                  <button
+                    onClick={() => setEditingItem(null)}
+                    className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => updateBudgetItem(editingItem)}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    <span>Update</span>
                   </button>
                 </div>
               </motion.div>

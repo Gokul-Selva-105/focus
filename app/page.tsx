@@ -131,16 +131,16 @@ export default function Dashboard() {
     fetchDashboardData()
   }, [session])
 
-  if (status === 'loading' || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
-          <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-r-pink-400 rounded-full animate-spin animation-delay-150"></div>
-        </div>
-      </div>
-    )
-  }
+  // if (status === 'loading' || isLoading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+  //       <div className="relative">
+  //         <div className="w-20 h-20 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+  //         <div className="absolute inset-0 w-20 h-20 border-4 border-transparent border-r-pink-400 rounded-full animate-spin animation-delay-150"></div>
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   if (!session) {
     return (

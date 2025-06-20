@@ -1,34 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]/route'
-
-// Mock database - in a real app, you'd use a proper database
-let meals: any[] = [
-  {
-    _id: '1',
-    name: 'Grilled Chicken Salad',
-    calories: 450,
-    protein: 35,
-    carbs: 20,
-    fat: 25,
-    mealType: 'lunch',
-    date: new Date().toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-    userEmail: 'user@example.com'
-  },
-  {
-    _id: '2',
-    name: 'Oatmeal with Berries',
-    calories: 320,
-    protein: 12,
-    carbs: 55,
-    fat: 8,
-    mealType: 'breakfast',
-    date: new Date().toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-    userEmail: 'user@example.com'
-  }
-]
+import { getMealsByUser, addMeal, generateMealId, type Meal } from '@/lib/meals-data'
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,11 +11,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Filter meals by user email
-    const userMeals = meals.filter(meal => meal.userEmail === session.user.email)
-    
-    // Sort by date (newest first)
-    userMeals.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    // Get meals by user email (already sorted)
+    const userMeals = getMealsByUser(session.user.email)
     
     return NextResponse.json(userMeals)
   } catch (error) {
@@ -72,8 +42,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const newMeal = {
-      _id: Date.now().toString(),
+    const newMeal: Meal = {
+      _id: generateMealId(),
       name,
       calories: parseInt(calories),
       protein: parseInt(protein) || 0,
@@ -85,7 +55,7 @@ export async function POST(request: NextRequest) {
       userEmail: session.user.email
     }
 
-    meals.push(newMeal)
+    addMeal(newMeal)
     
     return NextResponse.json(newMeal, { status: 201 })
   } catch (error) {
