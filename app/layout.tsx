@@ -25,7 +25,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
@@ -33,15 +33,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <div className="min-h-screen">
-              <Navigation />
-              <main className="container mx-auto px-6 pt-28 pb-12">
-                <div className="fade-in">
-                  {children}
-                </div>
-              </main>
-            </div>
-            <Toaster />
+            <Navigation />
+            <main className="pt-16 w-full">
+              {children}
+            </main>
           </AuthProvider>
         </ThemeProvider>
       </body>
