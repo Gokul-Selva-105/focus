@@ -27,6 +27,7 @@ export default function FitnessPage() {
   const [newActivity, setNewActivity] = useState({
     name: '',
     type: 'cardio' as const,
+    customType: '',
     duration: '',
     caloriesBurned: '',
     notes: ''
@@ -63,6 +64,7 @@ export default function FitnessPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newActivity,
+          type: newActivity.type === 'other' ? newActivity.customType : newActivity.type,
           duration: parseInt(newActivity.duration),
           caloriesBurned: parseInt(newActivity.caloriesBurned) || 0
         })
@@ -71,7 +73,7 @@ export default function FitnessPage() {
       if (response.ok) {
         const activity = await response.json()
         setActivities([activity, ...activities])
-        setNewActivity({ name: '', type: 'cardio', duration: '', caloriesBurned: '', notes: '' })
+        setNewActivity({ name: '', type: 'cardio', customType: '', duration: '', caloriesBurned: '', notes: '' })
         toast({ title: 'Activity logged successfully!' })
       }
     } catch (error) {
@@ -199,6 +201,18 @@ export default function FitnessPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
+              {newActivity.type === 'other' && (
+                <div>
+                  <Label htmlFor="customType">Specify Activity Type</Label>
+                  <Input
+                    id="customType"
+                    value={newActivity.customType}
+                    onChange={(e) => setNewActivity({ ...newActivity, customType: e.target.value })}
+                    placeholder="e.g., Dancing, Rock Climbing"
+                    required={newActivity.type === 'other'}
+                  />
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

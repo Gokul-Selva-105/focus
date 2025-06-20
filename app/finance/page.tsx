@@ -43,10 +43,15 @@ export default function FinancePage() {
       const response = await fetch('/api/transactions')
       if (response.ok) {
         const data = await response.json()
-        setTransactions(data)
+        const transactionsData = data.transactions || data || []
+        setTransactions(Array.isArray(transactionsData) ? transactionsData : [])
+      } else {
+        console.error('Failed to fetch transactions:', response.statusText)
+        setTransactions([])
       }
     } catch (error) {
       console.error('Failed to fetch transactions:', error)
+      setTransactions([])
     }
   }
 
@@ -93,13 +98,13 @@ export default function FinancePage() {
     }
   }
 
-  const totalIncome = transactions
+  const totalIncome = Array.isArray(transactions) ? transactions
     .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0)
+    .reduce((sum, t) => sum + t.amount, 0) : 0
 
-  const totalExpenses = transactions
+  const totalExpenses = Array.isArray(transactions) ? transactions
     .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0)
+    .reduce((sum, t) => sum + t.amount, 0) : 0
 
   const balance = totalIncome - totalExpenses
 

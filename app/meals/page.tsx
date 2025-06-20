@@ -56,7 +56,10 @@ export default function MealsPage() {
 
   const createMeal = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newMeal.name || !newMeal.calories) return
+    if (!newMeal.name) {
+      toast({ title: 'Please enter a meal name', variant: 'destructive' })
+      return
+    }
 
     setIsLoading(true)
     try {
@@ -211,14 +214,13 @@ export default function MealsPage() {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <Label htmlFor="calories">Calories</Label>
+                <Label htmlFor="calories">Calories (optional)</Label>
                 <Input
                   id="calories"
                   type="number"
                   value={newMeal.calories}
                   onChange={(e) => setNewMeal({ ...newMeal, calories: e.target.value })}
                   placeholder="0"
-                  required
                 />
               </div>
               <div>

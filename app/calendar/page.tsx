@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Plus, Calendar as CalendarIcon, Clock, MapPin, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Calendar as CalendarIcon, Clock, MapPin, Trash2, Edit, Filter, Search } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface CalendarEvent {
@@ -25,9 +28,11 @@ interface CalendarEvent {
 export default function CalendarPage() {
   const { data: session } = useSession()
   const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [filteredEvents, setFilteredEvents] = useState<CalendarEvent[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filterType, setFilterType] = useState<string>('all')
   const [showEventForm, setShowEventForm] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null)
   const [newEvent, setNewEvent] = useState({
     title: '',
     description: '',
@@ -45,21 +50,54 @@ export default function CalendarPage() {
     }
   }, [session])
 
+  useEffect(() => {
+    filterEvents()
+  }, [events, searchTerm, filterType])
+
   const fetchEvents = async () => {
     try {
       const response = await fetch('/api/events')
       if (response.ok) {
         const data = await response.json()
-        setEvents(data)
+        setEvents(Array.isArray(data) ? data : data.events || [])
       }
     } catch (error) {
       console.error('Failed to fetch events:', error)
+      toast({ title: 'Failed to fetch events', variant: 'destructive' })
     }
+  }
+
+  const filterEvents = () => {
+    let filtered = events
+    
+    if (searchTerm) {
+      filtered = filtered.filter(event => 
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+    
+    if (filterType !== 'all') {
+      filtered = filtered.filter(event => event.type === filterType)
+    }
+    
+    // Sort by date and time
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.date + 'T' + a.time)
+      const dateB = new Date(b.date + 'T' + b.time)
+      return dateA.getTime() - dateB.getTime()
+    })
+    
+    setFilteredEvents(filtered)
   }
 
   const createEvent = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newEvent.title || !newEvent.date || !newEvent.time) return
+    if (!newEvent.title || !newEvent.date || !newEvent.time) {
+      toast({ title: 'Please fill in all required fields', variant: 'destructive' })
+      return
+    }
 
     setIsLoading(true)
     try {
@@ -83,6 +121,36 @@ export default function CalendarPage() {
     }
   }
 
+  const updateEvent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingEvent || !newEvent.title || !newEvent.date || !newEvent.time) {
+      toast({ title: 'Please fill in all required fields', variant: 'destructive' })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/events/${editingEvent._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEvent)
+      })
+
+      if (response.ok) {
+        const updatedEvent = await response.json()
+        setEvents(events.map(e => e._id === editingEvent._id ? updatedEvent : e))
+        setEditingEvent(null)
+        setNewEvent({ title: '', description: '', date: '', time: '', location: '', type: 'personal' })
+        setShowEventForm(false)
+        toast({ title: 'Event updated successfully!' })
+      }
+    } catch (error) {
+      toast({ title: 'Failed to update event', variant: 'destructive' })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const deleteEvent = async (eventId: string) => {
     try {
       const response = await fetch(`/api/events/${eventId}`, {
@@ -98,256 +166,116 @@ export default function CalendarPage() {
     }
   }
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth()
-    const firstDay = new Date(year, month, 1)
-    const lastDay = new Date(year, month + 1, 0)
-    const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay()
-
-    const days = []
-    
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null)
-    }
-    
-    // Add all days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day))
-    }
-    
-    return days
-  }
-
-  const getEventsForDate = (date: Date) => {
-    const dateString = date.toISOString().split('T')[0]
-    return events.filter(event => event.date === dateString)
-  }
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => {
-      const newDate = new Date(prev)
-      if (direction === 'prev') {
-        newDate.setMonth(prev.getMonth() - 1)
-      } else {
-        newDate.setMonth(prev.getMonth() + 1)
-      }
-      return newDate
+  const startEdit = (event: CalendarEvent) => {
+    setEditingEvent(event)
+    setNewEvent({
+      title: event.title,
+      description: event.description || '',
+      date: event.date,
+      time: event.time,
+      location: event.location || '',
+      type: event.type
     })
-  }
-
-  const handleDateClick = (date: Date) => {
-    setSelectedDate(date)
-    setNewEvent({ ...newEvent, date: date.toISOString().split('T')[0] })
     setShowEventForm(true)
   }
 
-  const upcomingEvents = events
-    .filter(event => new Date(event.date + 'T' + event.time) >= new Date())
-    .sort((a, b) => new Date(a.date + 'T' + a.time).getTime() - new Date(b.date + 'T' + b.time).getTime())
-    .slice(0, 5)
+  const cancelEdit = () => {
+    setEditingEvent(null)
+    setNewEvent({ title: '', description: '', date: '', time: '', location: '', type: 'personal' })
+    setShowEventForm(false)
+  }
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ]
+  const getTypeColor = (type: string) => {
+    const colors = {
+      meeting: 'bg-blue-100 text-blue-800',
+      appointment: 'bg-green-100 text-green-800',
+      reminder: 'bg-yellow-100 text-yellow-800',
+      personal: 'bg-purple-100 text-purple-800',
+      work: 'bg-red-100 text-red-800'
+    }
+    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800'
+  }
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short', 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    })
+  }
+
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':')
+    const date = new Date()
+    date.setHours(parseInt(hours), parseInt(minutes))
+    return date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true 
+    })
+  }
+
+  const isEventPast = (event: CalendarEvent) => {
+    const eventDateTime = new Date(event.date + 'T' + event.time)
+    return eventDateTime < new Date()
+  }
+
+  const upcomingEvents = filteredEvents.filter(event => !isEventPast(event)).slice(0, 3)
+  const pastEvents = filteredEvents.filter(event => isEventPast(event))
 
   if (!session) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p>Please sign in to access your calendar.</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-96">
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>Please sign in to view your calendar.</CardDescription>
+          </CardHeader>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8">
+    <div className="container mx-auto p-6 space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
       >
-        <h1 className="text-3xl font-bold">Calendar</h1>
-        <p className="text-muted-foreground">Manage your schedule and events</p>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Calendar Grid */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5" />
-                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-1 mb-4">
-                {dayNames.map(day => (
-                  <div key={day} className="p-2 text-center text-sm font-medium text-muted-foreground">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {getDaysInMonth(currentDate).map((date, index) => {
-                  if (!date) {
-                    return <div key={index} className="p-2 h-20" />
-                  }
-                  
-                  const dayEvents = getEventsForDate(date)
-                  const isToday = date.toDateString() === new Date().toDateString()
-                  const isSelected = selectedDate?.toDateString() === date.toDateString()
-                  
-                  return (
-                    <motion.div
-                      key={date.toISOString()}
-                      whileHover={{ scale: 1.05 }}
-                      className={`p-2 h-20 border rounded-lg cursor-pointer transition-colors ${
-                        isToday ? 'bg-blue-100 border-blue-300' :
-                        isSelected ? 'bg-gray-100 border-gray-300' :
-                        'hover:bg-gray-50'
-                      }`}
-                      onClick={() => handleDateClick(date)}
-                    >
-                      <div className="text-sm font-medium">{date.getDate()}</div>
-                      <div className="space-y-1">
-                        {dayEvents.slice(0, 2).map(event => (
-                          <div
-                            key={event._id}
-                            className={`text-xs p-1 rounded truncate ${
-                              event.type === 'meeting' ? 'bg-blue-200 text-blue-800' :
-                              event.type === 'appointment' ? 'bg-green-200 text-green-800' :
-                              event.type === 'reminder' ? 'bg-yellow-200 text-yellow-800' :
-                              event.type === 'work' ? 'bg-purple-200 text-purple-800' :
-                              'bg-gray-200 text-gray-800'
-                            }`}
-                          >
-                            {event.title}
-                          </div>
-                        ))}
-                        {dayEvents.length > 2 && (
-                          <div className="text-xs text-muted-foreground">+{dayEvents.length - 2} more</div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Calendar & Events</h1>
+          <p className="text-gray-600">Manage your schedule and upcoming events</p>
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Add Event Button */}
-          <Button 
-            onClick={() => setShowEventForm(true)} 
-            className="w-full"
-            size="lg"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Event
-          </Button>
-
-          {/* Upcoming Events */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Events</CardTitle>
-              <CardDescription>Your next 5 events</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {upcomingEvents.length === 0 ? (
-                <div className="text-center py-4">
-                  <CalendarIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">No upcoming events</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {upcomingEvents.map(event => (
-                    <div key={event._id} className="flex items-start justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm">{event.title}</h4>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(event.date).toLocaleDateString()} at {event.time}
-                        </div>
-                        {event.location && (
-                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                            <MapPin className="h-3 w-3" />
-                            {event.location}
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteEvent(event._id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Event Form Modal */}
-      {showEventForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg p-6 w-full max-w-md mx-4"
-          >
-            <h2 className="text-xl font-bold mb-4">Add New Event</h2>
-            <form onSubmit={createEvent} className="space-y-4">
+        
+        <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
+          <DialogTrigger asChild>
+            <Button className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Event
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>{editingEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={editingEvent ? updateEvent : createEvent} className="space-y-4">
               <div>
-                <Label htmlFor="title">Event Title</Label>
+                <Label htmlFor="title">Event Title *</Label>
                 <Input
                   id="title"
                   value={newEvent.title}
                   onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                  placeholder="Meeting with team"
+                  placeholder="Enter event title"
                   required
                 />
               </div>
-              <div>
-                <Label htmlFor="type">Event Type</Label>
-                <select
-                  id="type"
-                  value={newEvent.type}
-                  onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value as any })}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="personal">Personal</option>
-                  <option value="work">Work</option>
-                  <option value="meeting">Meeting</option>
-                  <option value="appointment">Appointment</option>
-                  <option value="reminder">Reminder</option>
-                </select>
-              </div>
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="date">Date</Label>
+                  <Label htmlFor="date">Date *</Label>
                   <Input
                     id="date"
                     type="date"
@@ -357,7 +285,7 @@ export default function CalendarPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="time">Time</Label>
+                  <Label htmlFor="time">Time *</Label>
                   <Input
                     id="time"
                     type="time"
@@ -367,42 +295,227 @@ export default function CalendarPage() {
                   />
                 </div>
               </div>
+              
               <div>
-                <Label htmlFor="location">Location (Optional)</Label>
+                <Label htmlFor="type">Event Type</Label>
+                <Select value={newEvent.type} onValueChange={(value: any) => setNewEvent({ ...newEvent, type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="personal">Personal</SelectItem>
+                    <SelectItem value="work">Work</SelectItem>
+                    <SelectItem value="meeting">Meeting</SelectItem>
+                    <SelectItem value="appointment">Appointment</SelectItem>
+                    <SelectItem value="reminder">Reminder</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="location">Location</Label>
                 <Input
                   id="location"
                   value={newEvent.location}
                   onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                  placeholder="Conference Room A"
+                  placeholder="Enter location (optional)"
                 />
               </div>
+              
               <div>
-                <Label htmlFor="description">Description (Optional)</Label>
+                <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
                   value={newEvent.description}
                   onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                  placeholder="Additional details about the event"
+                  placeholder="Enter event description (optional)"
                   rows={3}
                 />
               </div>
+              
               <div className="flex gap-2 pt-4">
                 <Button type="submit" disabled={isLoading} className="flex-1">
-                  {isLoading ? 'Creating...' : 'Create Event'}
+                  {isLoading ? 'Saving...' : (editingEvent ? 'Update Event' : 'Create Event')}
                 </Button>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => setShowEventForm(false)}
-                  className="flex-1"
-                >
+                <Button type="button" variant="outline" onClick={cancelEdit}>
                   Cancel
                 </Button>
               </div>
             </form>
-          </motion.div>
+          </DialogContent>
+        </Dialog>
+      </motion.div>
+
+      {/* Search and Filter */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col md:flex-row gap-4"
+      >
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Search events..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-full md:w-48">
+            <Filter className="w-4 h-4 mr-2" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Events</SelectItem>
+            <SelectItem value="personal">Personal</SelectItem>
+            <SelectItem value="work">Work</SelectItem>
+            <SelectItem value="meeting">Meetings</SelectItem>
+            <SelectItem value="appointment">Appointments</SelectItem>
+            <SelectItem value="reminder">Reminders</SelectItem>
+          </SelectContent>
+        </Select>
+      </motion.div>
+
+      {/* Upcoming Events */}
+      {upcomingEvents.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="w-5 h-5" />
+                Upcoming Events
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {upcomingEvents.map((event) => (
+                  <div key={event._id} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-gray-900">{event.title}</h3>
+                        <Badge className={getTypeColor(event.type)}>{event.type}</Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span className="flex items-center gap-1">
+                          <CalendarIcon className="w-3 h-3" />
+                          {formatDate(event.date)}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatTime(event.time)}
+                        </span>
+                        {event.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {event.location}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => startEdit(event)}>
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => deleteEvent(event._id)}>
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
+
+      {/* All Events List */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle>All Events ({filteredEvents.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {filteredEvents.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">No events found. Create your first event!</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredEvents.map((event) => (
+                  <motion.div
+                    key={event._id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+                      isEventPast(event) ? 'bg-gray-50 border-gray-200 opacity-75' : 'bg-white border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className={`font-semibold ${
+                            isEventPast(event) ? 'text-gray-600' : 'text-gray-900'
+                          }`}>{event.title}</h3>
+                          <Badge className={getTypeColor(event.type)}>{event.type}</Badge>
+                          {isEventPast(event) && (
+                            <Badge variant="secondary">Past</Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-2">
+                          <span className="flex items-center gap-1">
+                            <CalendarIcon className="w-3 h-3" />
+                            {formatDate(event.date)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatTime(event.time)}
+                          </span>
+                          {event.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {event.location}
+                            </span>
+                          )}
+                        </div>
+                        
+                        {event.description && (
+                          <p className="text-sm text-gray-600 mt-2">{event.description}</p>
+                        )}
+                      </div>
+                      
+                      <div className="flex gap-2 ml-4">
+                        <Button size="sm" variant="outline" onClick={() => startEdit(event)}>
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => deleteEvent(event._id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   )
 }
