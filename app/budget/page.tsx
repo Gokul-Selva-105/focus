@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Progress } from '@/components/ui/progress'
-import { Plus, DollarSign, TrendingUp, TrendingDown, Trash2, PiggyBank, Target, AlertTriangle } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { Plus, DollarSign, TrendingUp, TrendingDown, Trash2, PiggyBank, Target, AlertTriangle, Edit3, Copy, BarChart3, Calendar, RefreshCw } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface BudgetItem {
@@ -52,7 +54,13 @@ export default function BudgetPage() {
     budgetAmount: '',
     type: 'expense' as const
   })
+  const [editingItem, setEditingItem] = useState<BudgetItem | null>(null)
+  const [editAmount, setEditAmount] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
+  const [sortBy, setSortBy] = useState<'category' | 'amount' | 'spent' | 'remaining'>('category')
   const { toast } = useToast()
 
   const months = [
@@ -66,7 +74,8 @@ export default function BudgetPage() {
     }
   }, [session, selectedMonth, selectedYear])
 
-  const fetchBudgets = async () => {
+  const fetchBudgets = useCallback(async (showRefresh = false) => {
+    if (showRefresh) setIsRefreshing(true)
     try {
       const response = await fetch(`/api/budget?month=${selectedMonth}&year=${selectedYear}`)
       if (response.ok) {
@@ -78,8 +87,11 @@ export default function BudgetPage() {
     } catch (error) {
       console.error('Failed to fetch budgets:', error)
       setBudgets([])
+      toast({ title: 'Failed to fetch budget data', variant: 'destructive' })
+    } finally {
+      if (showRefresh) setIsRefreshing(false)
     }
-  }
+  }, [selectedMonth, selectedYear, toast])
 
   const createBudgetItem = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,23 +137,128 @@ export default function BudgetPage() {
     }
   }
 
+  const editBudgetItem = async (itemId: string, newAmount: number) => {
+    try {
+      const response = await fetch(`/api/budget/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ budgetAmount: newAmount })
+      })
+
+      if (response.ok) {
+        await fetchBudgets()
+        setShowEditDialog(false)
+        setEditingItem(null)
+        toast({ title: 'Budget item updated successfully!' })
+      }
+    } catch (error) {
+      toast({ title: 'Failed to update budget item', variant: 'destructive' })
+    }
+  }
+
+  const copyBudgetToNextMonth = async () => {
+    if (!currentBudget?.items || currentBudget.items.length === 0) {
+      toast({ title: 'No budget items to copy', variant: 'destructive' })
+      return
+    }
+
+    const nextMonth = selectedMonth === 11 ? 0 : selectedMonth + 1
+    const nextYear = selectedMonth === 11 ? selectedYear + 1 : selectedYear
+
+    try {
+      for (const item of currentBudget.items) {
+        await fetch('/api/budget', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: item.category,
+            budgetAmount: item.budgetAmount,
+            type: item.type,
+            month: months[nextMonth],
+            year: nextYear
+          })
+        })
+      }
+      toast({ title: `Budget copied to ${months[nextMonth]} ${nextYear}!` })
+    } catch (error) {
+      toast({ title: 'Failed to copy budget', variant: 'destructive' })
+    }
+  }
+
+  const handleEditClick = (item: BudgetItem) => {
+    setEditingItem(item)
+    setEditAmount(item.budgetAmount.toString())
+    setShowEditDialog(true)
+  }
+
+  const handleEditSubmit = () => {
+    if (editingItem && editAmount) {
+      editBudgetItem(editingItem._id, parseFloat(editAmount))
+    }
+  }
+
   const currentBudget = budgets.find(b => 
     b.month === months[selectedMonth] && b.year === selectedYear
   )
 
-  const totalIncomeBudget = currentBudget?.items
-    ?.filter(item => item.type === 'income')
-    ?.reduce((sum, item) => sum + item.budgetAmount, 0) || 0
+  const filteredAndSortedItems = useMemo(() => {
+    if (!currentBudget?.items) return []
+    
+    let filtered = currentBudget.items
+    if (filterType !== 'all') {
+      filtered = filtered.filter(item => item.type === filterType)
+    }
+    
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'amount':
+          return b.budgetAmount - a.budgetAmount
+        case 'spent':
+          return b.spentAmount - a.spentAmount
+        case 'remaining':
+          return (b.budgetAmount - b.spentAmount) - (a.budgetAmount - a.spentAmount)
+        default:
+          return a.category.localeCompare(b.category)
+      }
+    })
+  }, [currentBudget?.items, filterType, sortBy])
 
-  const totalExpenseBudget = currentBudget?.items
-    ?.filter(item => item.type === 'expense')
-    ?.reduce((sum, item) => sum + item.budgetAmount, 0) || 0
+  const budgetSummary = useMemo(() => {
+    const items = currentBudget?.items || []
+    
+    const totalIncomeBudget = items
+      .filter(item => item.type === 'income')
+      .reduce((sum, item) => sum + item.budgetAmount, 0)
 
-  const totalActualIncome = currentBudget?.actualIncome || 0
-  const totalActualExpenses = currentBudget?.actualExpenses || 0
+    const totalExpenseBudget = items
+      .filter(item => item.type === 'expense')
+      .reduce((sum, item) => sum + item.budgetAmount, 0)
 
-  const budgetBalance = totalIncomeBudget - totalExpenseBudget
-  const actualBalance = totalActualIncome - totalActualExpenses
+    const totalActualIncome = currentBudget?.actualIncome || 0
+    const totalActualExpenses = currentBudget?.actualExpenses || 0
+
+    const budgetBalance = totalIncomeBudget - totalExpenseBudget
+    const actualBalance = totalActualIncome - totalActualExpenses
+    const savingsRate = totalActualIncome > 0 ? ((totalActualIncome - totalActualExpenses) / totalActualIncome) * 100 : 0
+    
+    return {
+      totalIncomeBudget,
+      totalExpenseBudget,
+      totalActualIncome,
+      totalActualExpenses,
+      budgetBalance,
+      actualBalance,
+      savingsRate,
+      overBudgetItems: items.filter(item => item.spentAmount > item.budgetAmount).length
+    }
+  }, [currentBudget?.items, currentBudget?.actualIncome, currentBudget?.actualExpenses])
+
+  const totalIncomeBudget = budgetSummary.totalIncomeBudget
+  const totalExpenseBudget = budgetSummary.totalExpenseBudget
+  const totalActualIncome = budgetSummary.totalActualIncome
+  const totalActualExpenses = budgetSummary.totalActualExpenses
+  const budgetBalance = budgetSummary.budgetBalance
+  const actualBalance = budgetSummary.actualBalance
 
   if (!session) {
     return (
@@ -186,50 +303,100 @@ export default function BudgetPage() {
           <p className="text-xl text-muted-foreground">Plan and track your monthly income and expenses</p>
         </motion.div>
 
-        {/* Month/Year Selector */}
+        {/* Header with Month/Year Selector and Controls */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="flex gap-4 justify-center items-center"
+          className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8"
         >
-          <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {months.map((month, index) => (
-                <SelectItem key={index} value={index.toString()}>{month}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
-                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <PiggyBank className="h-8 w-8 text-blue-600" />
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                Monthly Budget Planner
+              </h1>
+            </div>
+            <p className="text-gray-600">Track your income and expenses for {months[selectedMonth]} {selectedYear}</p>
+            {budgetSummary.overBudgetItems > 0 && (
+              <div className="flex items-center gap-2 mt-2">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <span className="text-sm text-amber-600">
+                  {budgetSummary.overBudgetItems} categories over budget
+                </span>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap gap-3">
+            <div className="flex gap-2">
+              <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value)))}>
+                <SelectTrigger className="w-32">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month, index) => (
+                    <SelectItem key={month} value={index.toString()}>{month}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value)))}>
+                <SelectTrigger className="w-24">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i).map(year => (
+                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Button 
+              onClick={() => fetchBudgets(true)} 
+              variant="outline" 
+              size="sm"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            
+            {currentBudget?.items && currentBudget.items.length > 0 && (
+              <Button onClick={copyBudgetToNextMonth} variant="outline" size="sm">
+                <Copy className="h-4 w-4 mr-2" />
+                Copy to Next Month
+              </Button>
+            )}
+          </div>
         </motion.div>
 
-        {/* Budget Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Enhanced Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Planned Income</CardTitle>
-                <TrendingUp className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">${totalIncomeBudget.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">Monthly budget</p>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-600">Total Income</p>
+                    <p className="text-2xl font-bold text-green-700">${totalActualIncome.toFixed(2)}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-green-600">Budget: ${totalIncomeBudget.toFixed(2)}</p>
+                      {totalActualIncome > totalIncomeBudget && (
+                        <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">
+                          +{((totalActualIncome - totalIncomeBudget) / totalIncomeBudget * 100).toFixed(1)}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <TrendingUp className="h-8 w-8 text-green-600" />
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -239,14 +406,23 @@ export default function BudgetPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Planned Expenses</CardTitle>
-                <TrendingDown className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">${totalExpenseBudget.toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">Monthly budget</p>
+            <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200 hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-600">Total Expenses</p>
+                    <p className="text-2xl font-bold text-red-700">${totalActualExpenses.toFixed(2)}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-red-600">Budget: ${totalExpenseBudget.toFixed(2)}</p>
+                      {totalActualExpenses > totalExpenseBudget && (
+                        <Badge variant="destructive" className="text-xs">
+                          Over by ${(totalActualExpenses - totalExpenseBudget).toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <TrendingDown className="h-8 w-8 text-red-600" />
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -256,18 +432,26 @@ export default function BudgetPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Budget Balance</CardTitle>
-                <Target className="h-4 w-4 text-blue-500" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${
-                  budgetBalance >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  ${budgetBalance.toFixed(2)}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-600">Net Balance</p>
+                    <p className={`text-2xl font-bold ${actualBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                      ${actualBalance.toFixed(2)}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-blue-600">Budget: ${budgetBalance.toFixed(2)}</p>
+                      <Badge 
+                        variant={actualBalance >= budgetBalance ? "secondary" : "outline"}
+                        className="text-xs"
+                      >
+                        {actualBalance >= budgetBalance ? "On Track" : "Behind"}
+                      </Badge>
+                    </div>
+                  </div>
+                  <DollarSign className="h-8 w-8 text-blue-600" />
                 </div>
-                <p className="text-xs text-muted-foreground">Planned surplus/deficit</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -277,28 +461,89 @@ export default function BudgetPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.5 }}
           >
-            <Card className="glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Actual Balance</CardTitle>
-                <DollarSign className="h-4 w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${
-                  actualBalance >= 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  ${actualBalance.toFixed(2)}
+            <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-purple-600">Savings Rate</p>
+                    <p className="text-2xl font-bold text-purple-700">
+                      {budgetSummary.savingsRate.toFixed(1)}%
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xs text-purple-600">{currentBudget?.items?.length || 0} Categories</p>
+                      {budgetSummary.savingsRate >= 20 && (
+                        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
+                          Excellent!
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  <Target className="h-8 w-8 text-purple-600" />
                 </div>
-                <p className="text-xs text-muted-foreground">Current month</p>
               </CardContent>
             </Card>
           </motion.div>
         </div>
 
+        {/* Filters and Controls */}
+        {currentBudget?.items && currentBudget.items.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="mb-6"
+          >
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-gray-600" />
+                      <span className="text-sm font-medium">Filter:</span>
+                    </div>
+                    <Select value={filterType} onValueChange={(value: 'all' | 'income' | 'expense') => setFilterType(value)}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="income">Income</SelectItem>
+                        <SelectItem value="expense">Expenses</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">Sort by:</span>
+                    </div>
+                    <Select value={sortBy} onValueChange={(value: 'category' | 'amount' | 'spent' | 'remaining') => setSortBy(value)}>
+                      <SelectTrigger className="w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="category">Category</SelectItem>
+                        <SelectItem value="amount">Budget Amount</SelectItem>
+                        <SelectItem value="spent">Amount Spent</SelectItem>
+                        <SelectItem value="remaining">Remaining</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600">
+                    Showing {filteredAndSortedItems.length} of {currentBudget.items.length} items
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Add New Budget Item */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
+          transition={{ duration: 0.5, delay: 0.7 }}
         >
           <Card className="glass-card">
             <CardHeader>
@@ -373,94 +618,170 @@ export default function BudgetPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
           >
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle>Budget Items for {months[selectedMonth]} {selectedYear}</CardTitle>
-                <CardDescription>
-                  Track your planned vs actual spending by category
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Budget Items for {months[selectedMonth]} {selectedYear}</CardTitle>
+                    <CardDescription>
+                      Track your planned vs actual spending by category
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={() => handleEditClick(filteredAndSortedItems[0])}
+                    variant="outline"
+                    size="sm"
+                    disabled={filteredAndSortedItems.length === 0}
+                  >
+                    <Edit3 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {currentBudget.items.map((item, index) => {
-                    const progressPercentage = item.budgetAmount > 0 
-                      ? Math.min((item.spentAmount / item.budgetAmount) * 100, 100) 
-                      : 0
-                    const isOverBudget = item.spentAmount > item.budgetAmount
-                    
-                    return (
-                      <motion.div
-                        key={item._id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="p-4 border rounded-lg space-y-3"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`p-2 rounded-full ${
-                              item.type === 'income' 
-                                ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400'
-                                : 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400'
-                            }`}>
-                              {item.type === 'income' ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                            </div>
-                            <div>
-                              <h4 className="font-medium">{item.category}</h4>
-                              <p className="text-sm text-muted-foreground capitalize">{item.type}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-medium">${item.spentAmount.toFixed(2)} / ${item.budgetAmount.toFixed(2)}</p>
-                              <p className={`text-sm ${
-                                isOverBudget ? 'text-red-500' : 'text-muted-foreground'
+                  <AnimatePresence>
+                    {filteredAndSortedItems.map((item, index) => {
+                      const progressPercentage = item.budgetAmount > 0 
+                        ? Math.min((item.spentAmount / item.budgetAmount) * 100, 100) 
+                        : 0
+                      const isOverBudget = item.spentAmount > item.budgetAmount
+                      const remaining = item.budgetAmount - item.spentAmount
+
+                      return (
+                        <motion.div
+                          key={item._id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ duration: 0.3, delay: index * 0.05 }}
+                          className="group p-4 border rounded-lg bg-white/50 backdrop-blur-sm hover:bg-white/70 transition-all duration-200"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-full transition-colors ${
+                                item.type === 'income' 
+                                  ? 'bg-green-100 text-green-600 group-hover:bg-green-200' 
+                                  : 'bg-red-100 text-red-600 group-hover:bg-red-200'
                               }`}>
-                                {isOverBudget ? 'Over budget' : 'Within budget'}
-                              </p>
+                                {item.type === 'income' ? (
+                                  <TrendingUp className="h-4 w-4" />
+                                ) : (
+                                  <TrendingDown className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{item.category}</h4>
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm text-gray-600 capitalize">{item.type}</p>
+                                  {isOverBudget && (
+                                    <Badge variant="destructive" className="text-xs">
+                                      Over Budget
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
                             </div>
-                            {isOverBudget && <AlertTriangle className="h-4 w-4 text-red-500" />}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteBudgetItem(item._id)}
-                              className="text-red-500 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button
+                                onClick={() => handleEditClick(item)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              >
+                                <Edit3 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                onClick={() => deleteBudgetItem(item._id)}
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
-                        {item.type === 'expense' && (
-                          <div className="space-y-2">
+
+                          <div className="space-y-3">
                             <div className="flex justify-between text-sm">
-                              <span>Progress</span>
-                              <span>{progressPercentage.toFixed(1)}%</span>
+                              <span className="font-medium">Budget: <span className="text-blue-600">${item.budgetAmount.toFixed(2)}</span></span>
+                              <span className="font-medium">Spent: <span className={item.spentAmount > item.budgetAmount ? 'text-red-600' : 'text-green-600'}>${item.spentAmount.toFixed(2)}</span></span>
                             </div>
                             <Progress 
                               value={progressPercentage} 
-                              className={`h-2 ${
-                                isOverBudget ? '[&>div]:bg-red-500' : '[&>div]:bg-green-500'
+                              className={`h-3 transition-all duration-300 ${
+                                isOverBudget ? 'bg-red-100' : 'bg-gray-100'
                               }`}
                             />
+                            <div className="flex justify-between items-center text-sm">
+                              <span className={`font-medium ${
+                                remaining >= 0 ? 'text-green-600' : 'text-red-600'
+                              }`}>
+                                {remaining >= 0 ? 'Remaining' : 'Over budget'}: ${Math.abs(remaining).toFixed(2)}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-600">
+                                  {progressPercentage.toFixed(1)}%
+                                </span>
+                                {progressPercentage >= 90 && progressPercentage < 100 && (
+                                  <Badge variant="outline" className="text-xs text-amber-600">
+                                    Almost Full
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        )}
-                      </motion.div>
-                    )
-                  })}
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
                 </div>
               </CardContent>
             </Card>
           </motion.div>
         )}
 
+        {/* Edit Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Budget Item</DialogTitle>
+              <DialogDescription>
+                Update the budget amount for {editingItem?.category}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-amount">Budget Amount</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  step="0.01"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  placeholder="Enter new budget amount"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleEditSubmit}>
+                  Update
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Empty State */}
         {(!currentBudget?.items || currentBudget.items.length === 0) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
             className="text-center py-12"
           >
             <PiggyBank className="h-16 w-16 text-muted-foreground mx-auto mb-4" />

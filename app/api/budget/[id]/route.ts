@@ -1,14 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
+import { authOptions } from '../../auth/[...nextauth]/route'
 import { connectToDatabase } from '@/lib/mongodb'
 import Budget from '@/models/Budget'
+
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { budgetAmount } = await request.json()
+    
+    if (!budgetAmount || budgetAmount <= 0) {
+      return NextResponse.json({ error: 'Valid budget amount is required' }, { status: 400 })
+    }
+
+    await connectToDatabase()
+    
+    const budget = await Budget.findOne({
+      'items._id': params.id,
+      userEmail: session.user.email
+    })
+
+    if (!budget) {
+      return NextResponse.json({ error: 'Budget item not found' }, { status: 404 })
+    }
+
+    // Update the specific budget item
+    const itemIndex = budget.items.findIndex((item: any) => item._id.toString() === params.id)
+    if (itemIndex === -1) {
+      return NextResponse.json({ error: 'Budget item not found' }, { status: 404 })
+    }
+
+    budget.items[itemIndex].budgetAmount = budgetAmount
+    
+    // Update totals
+    budget.totalIncomeBudget = budget.items
+      .filter((item: any) => item.type === 'income')
+      .reduce((sum: number, item: any) => sum + item.budgetAmount, 0)
+    
+    budget.totalExpenseBudget = budget.items
+      .filter((item: any) => item.type === 'expense')
+      .reduce((sum: number, item: any) => sum + item.budgetAmount, 0)
+
+    await budget.save()
+
+    return NextResponse.json({ message: 'Budget item updated successfully' })
+  } catch (error) {
+    console.error('Error updating budget item:', error)
+    return NextResponse.json({ error: 'Failed to update budget item' }, { status: 500 })
+  }
+}
 
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession()
+    const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
