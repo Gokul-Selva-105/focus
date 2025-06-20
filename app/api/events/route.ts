@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../auth/[...nextauth]/route'
+import { getEventsByUser, addEvent, generateEventId, Event } from '@/lib/events-data'
 
 // Mock database - in a real app, you'd use a proper database
-// Export this so it can be shared with the [id] route
-export let events: any[] = [
+const sampleEvents: Event[] = [
   {
     _id: '1',
     title: 'Team Meeting',
@@ -48,15 +48,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Filter events by user email
-    const userEvents = events.filter(event => event.userEmail === session.user.email)
-    
-    // Sort by date and time
-    userEvents.sort((a, b) => {
-      const dateA = new Date(a.date + 'T' + a.time)
-      const dateB = new Date(b.date + 'T' + b.time)
-      return dateA.getTime() - dateB.getTime()
-    })
+    // Get events for the user
+    const userEvents = getEventsByUser(session.user.email)
     
     return NextResponse.json(userEvents)
   } catch (error) {
@@ -94,8 +87,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const newEvent = {
-      _id: Date.now().toString(),
+    const newEvent: Event = {
+      _id: generateEventId(),
       title,
       description: description || '',
       date,
@@ -106,7 +99,7 @@ export async function POST(request: NextRequest) {
       userEmail: session.user.email
     }
 
-    events.push(newEvent)
+    addEvent(newEvent)
     
     return NextResponse.json(newEvent, { status: 201 })
   } catch (error) {

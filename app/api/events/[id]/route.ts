@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '../../auth/[...nextauth]/route'
-
-// Import the shared events array from the main route
-import { events } from '../route'
+import { deleteEvent, updateEvent } from '@/lib/events-data'
 
 export async function DELETE(
   request: NextRequest,
